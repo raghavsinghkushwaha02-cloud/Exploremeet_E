@@ -2,712 +2,233 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="referrer" content="no-referrer"> <!-- Critical for Google Photos -->
-    <title>ExploreMeet Chat | Random Video</title>
-    
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Third Party SDKs -->
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <!-- ZegoCloud -->
-    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | ExploreMeet</title>
+    <!-- Tailwind CSS (via CDN for quick admin styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --primary: #ff0055; /* Neon Pink */
-            --bg: #0a0a12;
-            --glass: rgba(255, 255, 255, 0.1);
-            --text: #ffffff;
-            --gray: #888;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #0f0c29; color: white; font-family: sans-serif; }
+        .neon-text { color: #ff0099; text-shadow: 0 0 5px #ff0099; }
+        .glass { background: rgba(30, 27, 58, 0.9); backdrop-filter: blur(10px); border: 1px solid #333; }
+        .btn-action { transition: 0.2s; }
+        .btn-action:hover { opacity: 0.8; }
         
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* --- Utilities --- */
-        .hidden { display: none !important; }
-        .btn {
-            background: var(--primary);
-            border: none;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 0 15px var(--primary);
-            transition: transform 0.2s;
-        }
-        .btn:active { transform: scale(0.95); }
-        .btn-outline { background: transparent; border: 2px solid var(--primary); box-shadow: none; }
-
-        /* --- Auth Screen --- */
-        #auth-screen {
-            position: fixed; inset: 0; z-index: 999;
-            background: var(--bg);
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            text-align: center;
-        }
-        .logo { font-size: 2rem; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; }
-        .logo span { color: var(--primary); }
-
-        /* --- Main App Layout --- */
-        #app-container { flex: 1; position: relative; overflow-y: auto; padding-bottom: 70px; }
-        
-        /* Bottom Nav */
-        .bottom-nav {
-            position: fixed; bottom: 0; width: 100%; height: 60px;
-            background: rgba(10, 10, 18, 0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex; justify-content: space-around; align-items: center;
-            z-index: 100;
-        }
-        .nav-item { color: var(--gray); font-size: 1.5rem; cursor: pointer; position: relative; }
-        .nav-item.active { color: var(--primary); text-shadow: 0 0 10px var(--primary); }
-
-        /* --- Tabs --- */
-        .tab-content { padding: 20px; height: 100%; display: none; }
-        .tab-content.active { display: block; }
-
-        /* Home / Radar */
-        #home-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; }
-        .avatar-container {
-            width: 120px; height: 120px; border-radius: 50%;
-            position: relative; margin-bottom: 40px;
-        }
-        .user-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); }
-        
-        /* Radar Animation */
-        .radar-ring {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            border: 2px solid var(--primary);
-            border-radius: 50%;
-            opacity: 0;
-        }
-        .animate-radar .radar-ring { animation: radar 2s infinite ease-out; }
-        .animate-radar .radar-ring:nth-child(1) { width: 120px; height: 120px; animation-delay: 0s; }
-        .animate-radar .radar-ring:nth-child(2) { width: 120px; height: 120px; animation-delay: 0.5s; }
-        .animate-radar .radar-ring:nth-child(3) { width: 120px; height: 120px; animation-delay: 1s; }
-
-        @keyframes radar {
-            0% { width: 120px; height: 120px; opacity: 0.8; }
-            100% { width: 300px; height: 300px; opacity: 0; }
-        }
-
-        /* Video Container */
-        #video-overlay {
-            position: fixed; inset: 0; background: #000; z-index: 200;
-            display: none;
-        }
-        #zego-mount { width: 100%; height: 100%; }
-        
-        /* Custom Video Controls */
-        .video-controls {
-            position: absolute; bottom: 80px; left: 0; width: 100%;
-            display: flex; justify-content: center; gap: 20px;
-            z-index: 210;
-        }
-        .control-btn {
-            width: 50px; height: 50px; border-radius: 50%;
-            border: none; color: white; font-size: 1.2rem;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        .btn-next { background: var(--primary); width: 120px; border-radius: 30px; }
-        .btn-stop { background: #ff3333; }
-        .btn-friend { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); z-index: 210; }
-
-        /* Searching Overlay */
-        #searching-overlay {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.9);
-            z-index: 205; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            display: none;
-        }
-
-        /* Profile Tab */
-        .profile-header { text-align: center; margin-bottom: 20px; }
-        .vip-badge {
-            background: gold; color: black; padding: 2px 8px;
-            border-radius: 5px; font-size: 0.8rem; font-weight: bold;
-            display: none; margin-top: 5px;
-        }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; color: var(--gray); margin-bottom: 5px; }
-        .input-group input {
-            width: 100%; padding: 10px; background: var(--glass);
-            border: 1px solid #333; color: white; border-radius: 8px;
-        }
-        #custom-file-upload { display: none; }
-
-        /* Messages / Friends */
-        .friend-item {
-            display: flex; align-items: center; padding: 15px;
-            background: var(--glass); margin-bottom: 10px; border-radius: 10px;
-            cursor: pointer;
-        }
-        .friend-img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; }
-        .friend-info h4 { font-size: 1rem; }
-        .friend-info p { font-size: 0.8rem; color: var(--gray); }
-
-        /* Chat Overlay */
-        #chat-overlay {
-            position: fixed; inset: 0; background: var(--bg); z-index: 300;
-            display: flex; flex-direction: column; transform: translateX(100%);
-            transition: transform 0.3s;
-        }
-        #chat-overlay.open { transform: translateX(0); }
-        .chat-header {
-            padding: 15px; background: rgba(255,255,255,0.05);
-            display: flex; align-items: center; gap: 10px;
-        }
-        .chat-body { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .chat-footer { padding: 10px; background: rgba(0,0,0,0.5); display: flex; gap: 10px; }
-        .chat-msg { max-width: 70%; padding: 10px 15px; border-radius: 15px; font-size: 0.9rem; }
-        .msg-mine { background: var(--primary); align-self: flex-end; border-bottom-right-radius: 0; }
-        .msg-theirs { background: #333; align-self: flex-start; border-bottom-left-radius: 0; }
-
-        /* Ad Banner */
-        #ad-banner {
-            position: fixed; bottom: 60px; width: 100%; height: 50px;
-            background: #222; display: flex; align-items: center; justify-content: center;
-            color: #555; font-size: 0.8rem; border-top: 1px solid #333;
-        }
+        /* Table Styles */
+        th { text-align: left; padding: 12px; border-bottom: 2px solid #444; color: #aaa; }
+        td { padding: 12px; border-bottom: 1px solid #333; vertical-align: middle; }
     </style>
 </head>
-<body>
+<body class="p-6">
 
-    <!-- Auth Screen -->
-    <div id="auth-screen">
-        <div class="logo">Explore<span>Meet</span></div>
-        <button id="login-btn" class="btn"><i class="fab fa-google"></i> Login with Google</button>
+    <!-- Auth Guard -->
+    <div id="auth-guard" class="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-50">
+        <h2 class="text-2xl mb-4">Admin Access Required</h2>
+        <button id="admin-login-btn" class="bg-pink-600 px-6 py-3 rounded font-bold hover:bg-pink-700">Login as Admin</button>
     </div>
 
-    <!-- Main App -->
-    <div id="app-container" class="hidden">
-        
-        <!-- Home Tab -->
-        <div id="home-tab" class="tab-content active">
-            <div class="avatar-container" id="radar-anim">
-                <div class="radar-ring"></div>
-                <div class="radar-ring"></div>
-                <div class="radar-ring"></div>
-                <img src="" id="home-avatar" class="user-avatar" referrerpolicy="no-referrer">
+    <!-- Admin Dashboard -->
+    <div id="dashboard" class="hidden max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold neon-text">ExploreMeet <span class="text-white">Admin</span></h1>
+            <div class="flex gap-4 items-center">
+                <span id="admin-email" class="text-gray-400 text-sm"></span>
+                <button id="logout-btn" class="bg-gray-700 px-4 py-2 rounded hover:bg-gray-600">Logout</button>
             </div>
-            <h2 id="home-username" style="margin-bottom: 30px;">User</h2>
-            <button id="start-btn" class="btn">START MATCHING</button>
-        </div>
+        </header>
 
-        <!-- Messages Tab -->
-        <div id="messages-tab" class="tab-content">
-            <h2 style="margin-bottom: 20px;">Friends</h2>
-            <div id="friends-list">
-                <!-- Friends loaded via JS -->
-            </div>
-        </div>
-
-        <!-- Profile Tab -->
-        <div id="profile-tab" class="tab-content">
-            <div class="profile-header">
-                <div style="position: relative; display: inline-block;">
-                    <img src="" id="profile-avatar" class="user-avatar" style="width: 100px; height: 100px;" referrerpolicy="no-referrer">
-                    <button class="btn" style="position: absolute; bottom: 0; right: -10px; padding: 5px 10px; border-radius: 50%;" onclick="document.getElementById('custom-file-upload').click()">
-                        <i class="fas fa-camera"></i>
-                    </button>
-                </div>
-                <input type="file" id="custom-file-upload" accept="image/*">
-                <h3 id="profile-name" style="margin-top: 10px;">User</h3>
-                <span id="vip-status" class="vip-badge">VIP MEMBER</span>
-            </div>
-
-            <div class="input-group">
-                <label>Date of Birth</label>
-                <input type="date" id="dob-input">
-            </div>
+        <!-- Grid Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <button id="save-profile-btn" class="btn btn-outline" style="width: 100%; margin-bottom: 15px;">Save Profile</button>
-            <button id="upgrade-btn" class="btn" style="width: 100%; margin-bottom: 15px; background: gold; color: black;">Upgrade to VIP (₹199)</button>
-            <button id="logout-btn" class="btn btn-outline" style="width: 100%; border-color: #ff3333; color: #ff3333;">Logout</button>
-        </div>
-
-    </div>
-
-    <!-- Bottom Nav -->
-    <nav class="bottom-nav hidden" id="nav-bar">
-        <div class="nav-item active" data-tab="home-tab"><i class="fas fa-video"></i></div>
-        <div class="nav-item" data-tab="messages-tab"><i class="fas fa-comment-alt"></i></div>
-        <div class="nav-item" data-tab="profile-tab"><i class="fas fa-user"></i></div>
-    </nav>
-
-    <!-- Ad Banner -->
-    <div id="ad-banner" class="hidden">
-        [AdMob Banner Space - 320x50]
-    </div>
-
-    <!-- Video Overlay (Zego + Custom Controls) -->
-    <div id="video-overlay">
-        <div id="zego-mount"></div>
-        
-        <!-- Searching Loader Overlay (Inside Video Div) -->
-        <div id="searching-overlay">
-            <div class="avatar-container animate-radar">
-                <div class="radar-ring"></div>
-                <div class="radar-ring"></div>
-                <img src="" id="search-avatar" class="user-avatar" referrerpolicy="no-referrer">
+            <!-- Ad Manager -->
+            <div class="glass p-6 rounded-lg h-fit">
+                <h2 class="text-xl font-bold mb-4 text-pink-500">Ad Configuration</h2>
+                <form id="ad-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Status</label>
+                        <select id="ad-status" class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white">
+                            <option value="off">OFF</option>
+                            <option value="on">ON</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Banner ID</label>
+                        <input type="text" id="ad-banner-id" class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white" placeholder="ca-app-pub-xxx">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Interstitial ID</label>
+                        <input type="text" id="ad-inter-id" class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white" placeholder="ca-app-pub-xxx">
+                    </div>
+                    <button type="submit" class="w-full bg-pink-600 py-2 rounded font-bold hover:bg-pink-500">Save Settings</button>
+                </form>
             </div>
-            <h3 style="margin-top: 20px;">Finding Partner...</h3>
-        </div>
 
-        <button class="control-btn btn-friend" id="add-friend-btn"><i class="fas fa-user-plus"></i></button>
+            <!-- User Manager -->
+            <div class="glass p-6 rounded-lg md:col-span-2">
+                <h2 class="text-xl font-bold mb-4 text-pink-500">User Management</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Status</th>
+                                <th>Sub</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body">
+                            <!-- Rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        <div class="video-controls">
-            <button class="control-btn btn-stop" id="stop-call-btn"><i class="fas fa-times"></i></button>
-            <button class="control-btn btn-next" id="next-match-btn">NEXT <i class="fas fa-chevron-right" style="margin-left: 5px;"></i></button>
-        </div>
-    </div>
-
-    <!-- Chat Overlay -->
-    <div id="chat-overlay">
-        <div class="chat-header">
-            <i class="fas fa-arrow-left" id="close-chat" style="cursor: pointer; padding: 10px;"></i>
-            <img src="" id="chat-friend-img" style="width: 35px; height: 35px; border-radius: 50%;">
-            <span id="chat-friend-name" style="font-weight: 600;">Friend</span>
-        </div>
-        <div class="chat-body" id="chat-body">
-            <!-- Messages -->
-        </div>
-        <div class="chat-footer">
-            <input type="text" id="msg-input" placeholder="Type a message..." style="flex: 1; padding: 10px; border-radius: 20px; border: none; outline: none;">
-            <button id="send-msg-btn" class="btn" style="padding: 10px 15px;"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 
     <script type="module">
         // --- 1. CONFIGURATION ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, set, update, onValue, get, push, remove, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getDatabase, ref, update, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDB6H5YFrr7gD7YmRsinknALrp5_RL3dLA",
             authDomain: "exploremeet---live.firebaseapp.com",
             databaseURL: "https://exploremeet---live-default-rtdb.firebaseio.com",
             projectId: "exploremeet---live",
-            storageBucket: "exploremeet---live.firebasestorage.app",
-            messagingSenderId: "169038218786",
             appId: "1:169038218786:web:4282137dbeb92000dbac7b"
         };
+
+        const SUPER_ADMIN = "raghavsinghkushwaha02@gmail.com";
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // Zego Config
-        const ZEGO_APP_ID = 2013687880;
-        const ZEGO_SERVER_SECRET = "2576346c100ee42b720e88db26d01e53";
+        const authGuard = document.getElementById('auth-guard');
+        const dashboard = document.getElementById('dashboard');
+        const adminEmailDisplay = document.getElementById('admin-email');
 
-        // Razorpay Config
-        const RAZORPAY_KEY = "rzp_live_SBirtJRkaeGMgl";
-
-        // State Variables
-        let currentUser = null;
-        let zp = null; // Zego Instance
-        let currentRoomId = null;
-        let currentPartnerId = null;
-        let isSearching = false;
-        let activeChatFriendId = null;
-
-        // --- 2. AUTHENTICATION ---
-        const loginBtn = document.getElementById('login-btn');
-        const authScreen = document.getElementById('auth-screen');
-        const appContainer = document.getElementById('app-container');
-        const navBar = document.getElementById('nav-bar');
-        const adBanner = document.getElementById('ad-banner');
-
-        loginBtn.addEventListener('click', () => {
+        // --- 2. SECURITY & AUTH ---
+        document.getElementById('admin-login-btn').addEventListener('click', () => {
             const provider = new GoogleAuthProvider();
-            signInWithPopup(auth, provider).catch(err => console.error(err));
+            signInWithPopup(auth, provider).catch(console.error);
         });
 
-        onAuthStateChanged(auth, async (user) => {
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        onAuthStateChanged(auth, (user) => {
             if (user) {
-                currentUser = user;
-                authScreen.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-                navBar.classList.remove('hidden');
-                
-                // Load User Data
-                const userRef = ref(db, `users/${user.uid}`);
-                const snapshot = await get(userRef);
-                const userData = snapshot.val() || {};
-
-                // Update UI with Photo (Custom or Google)
-                const photoURL = userData.customPhoto || user.photoURL || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-                updateAllAvatars(photoURL);
-                
-                document.getElementById('home-username').innerText = user.displayName;
-                document.getElementById('profile-name').innerText = user.displayName;
-
-                if (userData.subscription === 'VIP') {
-                    document.getElementById('vip-status').style.display = 'inline-block';
-                    adBanner.classList.add('hidden');
+                if (user.email === SUPER_ADMIN) {
+                    // Success
+                    authGuard.style.display = 'none';
+                    dashboard.classList.remove('hidden');
+                    adminEmailDisplay.innerText = user.email;
+                    initAdminPanel();
                 } else {
-                    adBanner.classList.remove('hidden');
+                    // Intruder
+                    alert("ACCESS DENIED: You are not the Super Admin.");
+                    signOut(auth);
                 }
-
-                // Initialize Database Entry
-                update(userRef, {
-                    displayName: user.displayName,
-                    email: user.email,
-                    photoURL: user.photoURL,
-                    online: true
-                });
-
-                loadFriendsList();
-
             } else {
-                currentUser = null;
-                authScreen.classList.remove('hidden');
-                appContainer.classList.add('hidden');
-                navBar.classList.add('hidden');
-                adBanner.classList.add('hidden');
+                authGuard.style.display = 'flex';
+                dashboard.classList.add('hidden');
             }
         });
 
-        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-
-        function updateAllAvatars(url) {
-            document.getElementById('home-avatar').src = url;
-            document.getElementById('profile-avatar').src = url;
-            document.getElementById('search-avatar').src = url;
+        function initAdminPanel() {
+            loadAdSettings();
+            loadUsers();
         }
 
-        // --- 3. PROFILE & IMAGE UPLOAD ---
-        const fileInput = document.getElementById('custom-file-upload');
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64String = reader.result;
-                    // Save to Firebase
-                    update(ref(db, `users/${currentUser.uid}`), { customPhoto: base64String });
-                    updateAllAvatars(base64String);
-                };
-                reader.readAsDataURL(file);
-            }
+        // --- 3. AD MANAGER LOGIC ---
+        function loadAdSettings() {
+            const adRef = ref(db, 'settings/ads');
+            onValue(adRef, (snapshot) => {
+                const data = snapshot.val() || { status: 'off', banner_id: '', inter_id: '' };
+                document.getElementById('ad-status').value = data.status;
+                document.getElementById('ad-banner-id').value = data.banner_id || '';
+                document.getElementById('ad-inter-id').value = data.inter_id || '';
+            });
+        }
+
+        document.getElementById('ad-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const status = document.getElementById('ad-status').value;
+            const banner = document.getElementById('ad-banner-id').value;
+            const inter = document.getElementById('ad-inter-id').value;
+
+            set(ref(db, 'settings/ads'), {
+                status: status,
+                banner_id: banner,
+                inter_id: inter
+            }).then(() => alert('Ad Settings Updated!'));
         });
 
-        document.getElementById('save-profile-btn').addEventListener('click', () => {
-            const dob = document.getElementById('dob-input').value;
-            if(dob) update(ref(db, `users/${currentUser.uid}`), { dob: dob });
-            alert("Profile Saved!");
-        });
+        // --- 4. USER MANAGER LOGIC ---
+        function loadUsers() {
+            const usersRef = ref(db, 'users');
+            const tbody = document.getElementById('user-table-body');
 
-        // --- 4. NAVIGATION ---
-        const navItems = document.querySelectorAll('.nav-item');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        navItems.forEach(item => {
-            item.addEventListener('click', () => {
-                navItems.forEach(n => n.classList.remove('active'));
-                item.classList.add('active');
+            onValue(usersRef, (snapshot) => {
+                tbody.innerHTML = ''; // Clear table
+                const users = snapshot.val();
                 
-                tabContents.forEach(t => t.classList.remove('active'));
-                document.getElementById(item.dataset.tab).classList.add('active');
-            });
-        });
+                if (!users) return;
 
-        // --- 5. MATCHING ALGORITHM (Omegle Logic) ---
-        const startBtn = document.getElementById('start-btn');
-        const videoOverlay = document.getElementById('video-overlay');
-        const searchingOverlay = document.getElementById('searching-overlay');
-        const radarAnim = document.getElementById('radar-anim');
+                Object.keys(users).forEach(uid => {
+                    const user = users[uid];
+                    const tr = document.createElement('tr');
+                    
+                    // Determine Avatar
+                    const avatarSrc = user.customPhoto || user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`;
+                    
+                    // Status Badge Color
+                    const statusColor = user.isBanned ? 'text-red-500 font-bold' : 'text-green-400';
+                    const statusText = user.isBanned ? 'BANNED' : 'Active';
 
-        startBtn.addEventListener('click', () => {
-            videoOverlay.style.display = 'block';
-            searchingOverlay.style.display = 'flex';
-            document.getElementById('zego-mount').innerHTML = ''; // Clear prev
-            startMatching();
-        });
+                    // Sub Badge Color
+                    const subColor = user.subscription === 'VIP' ? 'text-yellow-400 font-bold' : 'text-gray-400';
 
-        async function startMatching() {
-            if(isSearching) return;
-            isSearching = true;
-
-            const queueRef = ref(db, 'queue');
-            
-            // 1. Check queue for others
-            const snapshot = await get(queueRef);
-            let foundMatch = false;
-
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    const potentialPartnerId = child.key;
-                    // Don't match with self
-                    if (potentialPartnerId !== currentUser.uid && !foundMatch) {
-                        foundMatch = true;
-                        currentPartnerId = potentialPartnerId;
-                        currentRoomId = child.val().roomId; // Join their room
-                        
-                        // Remove them from queue (handshake)
-                        remove(ref(db, `queue/${potentialPartnerId}`));
-                        
-                        // Signal them that we matched (Optional, but Zego handles presence)
-                        startVideoCall(currentRoomId);
-                    }
+                    tr.innerHTML = `
+                        <td class="flex items-center gap-3">
+                            <img src="${avatarSrc}" class="w-10 h-10 rounded-full object-cover border border-gray-600" referrerpolicy="no-referrer">
+                            <div>
+                                <div class="font-bold">${user.displayName || 'No Name'}</div>
+                                <div class="text-xs text-gray-500">${user.email}</div>
+                            </div>
+                        </td>
+                        <td class="${statusColor}">${statusText}</td>
+                        <td class="${subColor}">${user.subscription}</td>
+                        <td>
+                            <div class="flex gap-2">
+                                <button onclick="window.toggleBan('${uid}', ${user.isBanned})" 
+                                    class="px-3 py-1 text-xs rounded ${user.isBanned ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white">
+                                    ${user.isBanned ? 'Unban' : 'Ban'}
+                                </button>
+                                <button onclick="window.toggleVip('${uid}', '${user.subscription}')" 
+                                    class="px-3 py-1 text-xs rounded bg-blue-600 hover:bg-blue-700 text-white">
+                                    ${user.subscription === 'VIP' ? 'Set Free' : 'Set VIP'}
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 });
-            }
-
-            // 2. If no match found, Add self to queue
-            if (!foundMatch) {
-                const newRoomId = `room_${currentUser.uid}_${Date.now()}`;
-                currentRoomId = newRoomId;
-                
-                // Add to queue and wait
-                set(ref(db, `queue/${currentUser.uid}`), {
-                    roomId: newRoomId,
-                    timestamp: serverTimestamp()
-                });
-
-                // Listen if I get removed from queue (meaning someone matched me)
-                const myQueueRef = ref(db, `queue/${currentUser.uid}`);
-                const unsubscribe = onValue(myQueueRef, (snap) => {
-                    if (isSearching && !snap.exists()) {
-                        // Node deleted, someone picked me!
-                        offValue(myQueueRef); // Stop listening
-                        startVideoCall(currentRoomId);
-                    }
-                });
-
-                // Function to detach listener if we cancel
-                window.cancelSearch = () => {
-                     remove(myQueueRef);
-                     offValue(myQueueRef); // Use correct way to remove listener in v9 modular if needed, or keeping ref
-                     isSearching = false;
-                };
-            }
-        }
-
-        function offValue(reference) {
-            // Helper to remove listeners (simplified)
-             onValue(reference, () => {}); 
-        }
-
-        // --- 6. ZEGOCLOUD VIDEO LOGIC ---
-        async function startVideoCall(roomID) {
-            isSearching = false;
-            searchingOverlay.style.display = 'none';
-
-            // Generate Token
-            const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-                ZEGO_APP_ID, 
-                ZEGO_SERVER_SECRET, 
-                roomID, 
-                currentUser.uid, 
-                currentUser.displayName || "User"
-            );
-
-            // Create Instance
-            zp = ZegoUIKitPrebuilt.create(kitToken);
-
-            // Join Room
-            zp.joinRoom({
-                container: document.getElementById('zego-mount'),
-                scenario: {
-                    mode: ZegoUIKitPrebuilt.OneONOneCall,
-                },
-                showPreJoinView: false,
-                turnOnCameraWhenJoining: true,
-                turnOnMicrophoneWhenJoining: true,
-                showLeaveRoomConfirmDialog: false,
-                showUserList: false,
-                showRoomTimer: false,
-                layout: "Auto",
-                onJoinRoom: () => {
-                   // Logic when joined
-                },
-                onLeaveRoom: () => {
-                    // Logic when left
-                }
-            });
-
-            // Hide Zego's default bottom bar with CSS injection if needed
-            // But we have our overlay controls with high Z-Index
-        }
-
-        // --- 7. VIDEO CONTROLS (Next, Stop, Add Friend) ---
-        
-        // NEXT Button (Zero Reload)
-        document.getElementById('next-match-btn').addEventListener('click', async () => {
-            if (zp) {
-                zp.destroy();
-                zp = null;
-            }
-            // If I was in queue, remove myself
-            if(isSearching) remove(ref(db, `queue/${currentUser.uid}`));
-
-            // UI Reset
-            document.getElementById('zego-mount').innerHTML = ''; 
-            searchingOverlay.style.display = 'flex';
-            
-            // Restart Match
-            startMatching();
-        });
-
-        // STOP Button
-        document.getElementById('stop-call-btn').addEventListener('click', () => {
-            if (zp) {
-                zp.destroy();
-                zp = null;
-            }
-            if(isSearching) remove(ref(db, `queue/${currentUser.uid}`));
-            
-            isSearching = false;
-            videoOverlay.style.display = 'none';
-        });
-
-        // ADD FRIEND Button
-        document.getElementById('add-friend-btn').addEventListener('click', async () => {
-            if(!currentPartnerId) {
-                alert("Wait for a user to join!");
-                return;
-            }
-            // Add to my friends
-            await update(ref(db, `users/${currentUser.uid}/friends/${currentPartnerId}`), { addedAt: serverTimestamp() });
-            alert("Friend Added!");
-        });
-
-
-        // --- 8. CHAT & FRIENDS SYSTEM ---
-        
-        function loadFriendsList() {
-            const friendsRef = ref(db, `users/${currentUser.uid}/friends`);
-            onValue(friendsRef, async (snapshot) => {
-                const listEl = document.getElementById('friends-list');
-                listEl.innerHTML = '';
-                
-                if (snapshot.exists()) {
-                    snapshot.forEach((child) => {
-                        const friendId = child.key;
-                        // Fetch Friend Details
-                        get(ref(db, `users/${friendId}`)).then(userSnap => {
-                            if(userSnap.exists()) {
-                                const fData = userSnap.val();
-                                const div = document.createElement('div');
-                                div.className = 'friend-item';
-                                div.innerHTML = `
-                                    <img src="${fData.customPhoto || fData.photoURL || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="friend-img" referrerpolicy="no-referrer">
-                                    <div class="friend-info">
-                                        <h4>${fData.displayName}</h4>
-                                        <p>Click to chat</p>
-                                    </div>
-                                `;
-                                div.onclick = () => openChat(friendId, fData);
-                                listEl.appendChild(div);
-                            }
-                        });
-                    });
-                } else {
-                    listEl.innerHTML = '<p style="text-align:center; margin-top:20px; color:#666;">No friends yet.</p>';
-                }
             });
         }
 
-        const chatOverlay = document.getElementById('chat-overlay');
-        const chatBody = document.getElementById('chat-body');
-        
-        function openChat(friendId, friendData) {
-            activeChatFriendId = friendId;
-            chatOverlay.classList.add('open');
-            document.getElementById('chat-friend-name').innerText = friendData.displayName;
-            document.getElementById('chat-friend-img').src = friendData.customPhoto || friendData.photoURL;
-            
-            loadMessages(friendId);
-        }
+        // --- 5. EXPOSE ACTIONS TO WINDOW (Module Scope Fix) ---
+        window.toggleBan = (uid, currentStatus) => {
+            update(ref(db, 'users/' + uid), { isBanned: !currentStatus });
+        };
 
-        document.getElementById('close-chat').addEventListener('click', () => {
-            chatOverlay.classList.remove('open');
-            activeChatFriendId = null;
-        });
-
-        function getChatId(uid1, uid2) {
-            return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
-        }
-
-        function loadMessages(friendId) {
-            const chatId = getChatId(currentUser.uid, friendId);
-            const msgsRef = ref(db, `messages/${chatId}`);
-            
-            // Remove previous listener if complex app, here we just overwrite
-            onValue(msgsRef, (snapshot) => {
-                chatBody.innerHTML = '';
-                if(snapshot.exists()) {
-                    snapshot.forEach(child => {
-                        const msg = child.val();
-                        const div = document.createElement('div');
-                        div.className = `chat-msg ${msg.sender === currentUser.uid ? 'msg-mine' : 'msg-theirs'}`;
-                        div.innerText = msg.text;
-                        chatBody.appendChild(div);
-                    });
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                }
-            });
-        }
-
-        document.getElementById('send-msg-btn').addEventListener('click', sendMessage);
-        
-        function sendMessage() {
-            const input = document.getElementById('msg-input');
-            const text = input.value.trim();
-            if(!text || !activeChatFriendId) return;
-
-            const chatId = getChatId(currentUser.uid, activeChatFriendId);
-            push(ref(db, `messages/${chatId}`), {
-                sender: currentUser.uid,
-                text: text,
-                timestamp: serverTimestamp()
-            });
-            input.value = '';
-        }
-
-        // --- 9. PAYMENTS (Razorpay) ---
-        document.getElementById('upgrade-btn').addEventListener('click', () => {
-            const options = {
-                "key": RAZORPAY_KEY, 
-                "amount": "19900", // 199.00 INR
-                "currency": "INR",
-                "name": "ExploreMeet VIP",
-                "description": "1 Month VIP Subscription",
-                "image": "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-                "handler": function (response) {
-                    if (response.razorpay_payment_id) {
-                        // Success
-                        update(ref(db, `users/${currentUser.uid}`), { subscription: 'VIP' });
-                        alert("Upgrade Successful! You are now VIP.");
-                        document.getElementById('vip-status').style.display = 'inline-block';
-                        adBanner.classList.add('hidden');
-                    }
-                },
-                "theme": { "color": "#ff0055" }
-            };
-            const rzp1 = new Razorpay(options);
-            rzp1.open();
-        });
-
+        window.toggleVip = (uid, currentSub) => {
+            const newSub = currentSub === 'VIP' ? 'Free' : 'VIP';
+            update(ref(db, 'users/' + uid), { subscription: newSub });
+        };
     </script>
 </body>
 </html>
