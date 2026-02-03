@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExploreMeet Super Admin</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --sidebar: #2c3e50;
+            --bg: #f4f7f6;
+            --primary: #3498db;
+            --text: #333;
+        }
+        body { margin: 0; font-family: 'Poppins', sans-serif; background: var(--bg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* LOGIN */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #2c3e50; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .login-card { background: white; padding: 40px; border-radius: 10px; width: 300px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .inp-field { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .btn-primary { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background: var(--sidebar); color: white; display: flex; flex-direction: column; padding: 20px; }
+        .brand { font-size: 1.5rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 1px; }
+        .menu-item { padding: 15px; cursor: pointer; color: #b0c4de; display: flex; align-items: center; gap: 10px; border-radius: 5px; transition: 0.2s; margin-bottom: 5px; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.1); color: white; }
+
+        /* CONTENT */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .section { display: none; animation: fadeIn 0.3s; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+
+        /* TABLE & AVATAR */
+        .table-wrap { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        th { text-align: left; padding: 15px; color: #888; font-size: 0.85rem; border-bottom: 1px solid #eee; }
+        td { padding: 15px; border-bottom: 1px solid #f9f9f9; vertical-align: middle; }
+
+        .initial-avatar {
+            width: 45px; height: 45px; border-radius: 50%; background: var(--primary); color: white;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; text-transform: uppercase;
+        }
+        
+        /* AD FORM */
+        .ad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .ad-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 8px; color: #555; }
+
+        /* BUTTONS */
+        .action-btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; font-size: 0.8rem; }
+        .btn-msg { background: #9b59b6; }
+        .btn-ban { background: #e74c3c; }
+        .btn-vip { background: #f1c40f; color: black; }
+
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-card">
+            <h2>Admin Login</h2>
+            <input type="password" id="admin-pass" class="inp-field" placeholder="Enter Password">
+            <button onclick="attemptLogin()" class="btn-primary">UNLOCK PANEL</button>
+            <p id="login-msg" style="color:red; font-size:0.8rem; margin-top:10px;"></p>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="brand"><i class="fas fa-shield-alt"></i> MASTER CTL</div>
+        <div class="menu-item active" onclick="nav('users')"><i class="fas fa-users"></i> User Manager</div>
+        <div class="menu-item" onclick="nav('ads')"><i class="fas fa-ad"></i> AdMob Units</div>
+        <div class="menu-item" onclick="nav('settings')"><i class="fas fa-cog"></i> Admin Settings</div>
+        <div class="menu-item" onclick="location.reload()" style="margin-top:auto;"><i class="fas fa-sign-out-alt"></i> Logout</div>
+    </div>
+
+    <div class="main-content">
+
+        <div id="sec-users" class="section active">
+            <h2 style="margin-bottom:20px;">User Management & Messages</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>USER</th>
+                            <th>CONTACT</th>
+                            <th>STATUS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="sec-ads" class="section">
+            <h2 style="margin-bottom:20px;">AdMob Configuration</h2>
+            <div class="ad-card" style="max-width: 800px;">
+                <p style="color:#666; margin-bottom:20px;">Enter Unit IDs for all ad formats. Leave blank if not used.</p>
+                
+                <div class="ad-grid">
+                    <div>
+                        <label>Banner Ad ID</label>
+                        <input type="text" id="ad-banner" class="inp-field" placeholder="ca-app-pub-xxx/xxx">
+                    </div>
+                    <div>
+                        <label>Interstitial Ad ID</label>
+                        <input type="text" id="ad-inter" class="inp-field" placeholder="ca-app-pub-xxx/xxx">
+                    </div>
+                    <div>
+                        <label>Rewarded Video ID</label>
+                        <input type="text" id="ad-reward" class="inp-field" placeholder="ca-app-pub-xxx/xxx">
+                    </div>
+                    <div>
+                        <label>Native Advanced ID</label>
+                        <input type="text" id="ad-native" class="inp-field" placeholder="ca-app-pub-xxx/xxx">
+                    </div>
+                    <div>
+                        <label>App Open ID</label>
+                        <input type="text" id="ad-open" class="inp-field" placeholder="ca-app-pub-xxx/xxx">
+                    </div>
+                    <div>
+                        <label>Global Ad Switch</label>
+                        <select id="ad-status" class="inp-field">
+                            <option value="on">Ads Enabled</option>
+                            <option value="off">Ads Disabled</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="saveAds()" class="btn-primary" style="margin-top:20px;">SAVE AD SETTINGS</button>
+            </div>
+        </div>
+
+        <div id="sec-settings" class="section">
+            <h2 style="margin-bottom:20px;">Admin Security</h2>
+            <div class="ad-card" style="max-width: 400px;">
+                <label>Change Admin Password</label>
+                <input type="text" id="new-pass" class="inp-field" placeholder="New Password">
+                <button onclick="updateAdminPass()" class="btn-primary" style="background:#2ecc71;">UPDATE PASSWORD</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, update, set, get, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDB6H5YFrr7gD7YmRsinknALrp5_RL3dLA",
+            authDomain: "exploremeet---live.firebaseapp.com",
+            databaseURL: "https://exploremeet---live-default-rtdb.firebaseio.com",
+            projectId: "exploremeet---live",
+            storageBucket: "exploremeet---live.firebasestorage.app",
+            messagingSenderId: "169038218786",
+            appId: "1:169038218786:web:4282137dbeb92000dbac7b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        // --- 1. LOGIN LOGIC ---
+        window.attemptLogin = async () => {
+            const inputPass = document.getElementById('admin-pass').value;
+            const passRef = ref(db, 'admin/password');
+            
+            // Fetch password from DB
+            const snap = await get(passRef);
+            let realPass = "12345"; // Default fallback
+            
+            if(snap.exists()) {
+                realPass = snap.val();
+            } else {
+                // First time login setup
+                set(passRef, "12345");
+            }
+
+            if(inputPass === realPass) {
+                document.getElementById('login-overlay').style.display = 'none';
+                initPanel();
+            } else {
+                document.getElementById('login-msg').innerText = "Wrong Password!";
+            }
+        };
+
+        window.updateAdminPass = () => {
+            const newP = document.getElementById('new-pass').value;
+            if(newP.length < 4) { alert("Password too short!"); return; }
+            set(ref(db, 'admin/password'), newP);
+            alert("Password Updated Successfully! Use this next time.");
+            document.getElementById('new-pass').value = "";
+        };
+
+        // --- 2. NAVIGATION ---
+        window.nav = (sec) => {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('sec-'+sec).classList.add('active');
+        }
+
+        // --- 3. LOAD USERS & ADS ---
+        function initPanel() {
+            // USERS
+            onValue(ref(db, 'users'), (snap) => {
+                const list = document.getElementById('user-list');
+                list.innerHTML = "";
+                if(snap.exists()) {
+                    snap.forEach(child => {
+                        const u = child.val();
+                        const uid = child.key;
+                        const initial = (u.name ? u.name.charAt(0) : "U").toUpperCase();
+                        const color = u.isBanned ? '#e74c3c' : '#3498db';
+
+                        list.innerHTML += `
+                        <tr>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <div class="initial-avatar" style="background:${color}">${initial}</div>
+                                    <div>
+                                        <strong>${u.name || 'User'}</strong><br>
+                                        <small style="color:#888;">ID: ${uid.substring(0,6)}...</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${u.email}</td>
+                            <td>
+                                ${u.isVIP ? '<span style="color:#f1c40f; font-weight:bold;">VIP</span>' : 'FREE'}
+                                ${u.isBanned ? '<br><span style="color:red; font-size:0.8rem;">BANNED</span>' : ''}
+                            </td>
+                            <td>
+                                <button class="action-btn btn-msg" onclick="sendMsg('${uid}')"><i class="fas fa-envelope"></i> Msg</button>
+                                <button class="action-btn btn-ban" onclick="toggleBan('${uid}', ${!u.isBanned})">${u.isBanned ? 'Unban' : 'Ban'}</button>
+                                <button class="action-btn btn-vip" onclick="toggleVIP('${uid}', ${!u.isVIP})">${u.isVIP ? 'Remove VIP' : 'Give VIP'}</button>
+                            </td>
+                        </tr>`;
+                    });
+                }
+            });
+
+            // ADS
+            get(ref(db, 'settings/ads')).then(snap => {
+                if(snap.exists()) {
+                    const d = snap.val();
+                    document.getElementById('ad-banner').value = d.banner || '';
+                    document.getElementById('ad-inter').value = d.inter || '';
+                    document.getElementById('ad-reward').value = d.reward || '';
+                    document.getElementById('ad-native').value = d.native || '';
+                    document.getElementById('ad-open').value = d.open || '';
+                    document.getElementById('ad-status').value = d.status || 'on';
+                }
+            });
+        }
+
+        // --- 4. ACTIONS ---
+        window.saveAds = () => {
+            set(ref(db, 'settings/ads'), {
+                banner: document.getElementById('ad-banner').value,
+                inter: document.getElementById('ad-inter').value,
+                reward: document.getElementById('ad-reward').value,
+                native: document.getElementById('ad-native').value,
+                open: document.getElementById('ad-open').value,
+                status: document.getElementById('ad-status').value
+            });
+            alert("Ad Settings Saved!");
+        };
+
+        window.toggleBan = (uid, status) => {
+            update(ref(db, `users/${uid}`), { isBanned: status });
+        };
+        window.toggleVIP = (uid, status) => {
+            update(ref(db, `users/${uid}`), { isVIP: status });
+        };
+
+        // SEND DIRECT MESSAGE
+        window.sendMsg = (uid) => {
+            const msg = prompt("Type message for this user:");
+            if(msg) {
+                // Push to user's notification node
+                push(ref(db, `users/${uid}/notifications`), {
+                    text: msg,
+                    time: Date.now(),
+                    from: "Admin Team"
+                });
+                alert("Message Sent!");
+            }
+        };
+
+    </script>
+</body>
+</html>
